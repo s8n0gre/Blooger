@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BlogPad</title>
+  <style>
+  :root 
+  {
+    --bg: #0f0f0f;
+    --text: #00ff88;
+    --accent: #00ff88;
+    --editor-bg: #121212;
+  }
+  body.light-mode 
+  {
+    --bg: #f4f4f4;
+    --text: #111;
+    --accent: #007f4f;
+    --editor-bg: #fff;
+  }
+  body 
+  {
+    font-family: 'Courier New', monospace;
+    margin: 0;
+    background-color: var(--bg);
+    color: var(--text);
+  }
+  #toolbar 
+  {
+    background-color: var(--editor-bg);
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 2px solid var(--accent);
+    box-shadow: 0 2px 5px rgba(0, 255, 136, 0.3);
+  }
+  #toolbar button, select, input[type="color"], input[type="text"] 
+  {
+    background-color: transparent;
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 6px 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  #toolbar button:hover, select:hover, input[type="color"]:hover 
+  {
+    background-color: var(--accent);
+    color: var(--bg);
+  }
+  #editor
+  {
+    min-height: 500px;
+    padding: 20px;
+    outline: none;
+    background-color: var(--editor-bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  code 
+  {
+    background: #222;
+    padding: 4px;
+    border-radius: 4px;
+    color: #0f0;
+    font-family: monospace;
+  }
+  pre code 
+  {
+    display: block;
+    background: #1e1e1e;
+    padding: 10px;
+    overflow-x: auto;
+    color: #0f0;
+  }
+  ::selection 
+  {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .hidden 
+  {
+    display: none;
+  }
+  .media-box 
+  {
+    position: absolute;
+    display: inline-block;
+    cursor: move;
+    resize: both;
+    overflow: hidden;
+    border: 1px solid var(--accent);
+    padding: 4px;
+    z-index: 10;
+    background: #000000aa;
+    max-width: 300px;
+  }
+  .media-box iframe, .media-box video 
+  {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .context-menu 
+  {
+    position: absolute;
+    top: -5px;
+    left: 100%;
+    background-color: var(--editor-bg);
+    border: 1px solid var(--accent);
+    display: flex;
+    flex-direction: column;
+    font-size: 12px;
+    z-index: 999;
+  }
+  .context-menu button 
+  {
+    background: transparent;
+    color: var(--text);
+    border: none;
+    padding: 4px 6px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .context-menu button:hover 
+  {
+    background-color: var(--accent);
+    color: var(--bg);
+  }
+  .wrap-left 
+  {
+    float: left;
+    margin: 10px 20px 10px 0;
+  }
+  .wrap-right 
+  {
+    float: right;
+    margin: 10px 0 10px 20px;
+  }
+  .media-box.selected 
+  {
+    outline: 2px dashed var(--accent);
+  }
+  .draggable-image 
+  {
+    position: relative;
+    display: inline-block;
+    cursor: move;
+    margin: 10px;
+  }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button onclick="execCmd('bold')">Bold</button>
+    <button onclick="execCmd('italic')">Italic</button>
+    <button onclick="execCmd('underline')">Underline</button>
+    <button onclick="execCmd('insertUnorderedList')">• List</button>
+    <button onclick="execCmd('formatBlock','<h1>')">H1</button>
+    <button onclick="execCmd('formatBlock','<h2>')">H2</button>
+    <button onclick="insertCode()">Insert Code Block</button>
+    <select onchange="execCmd('fontSize', this.value)">
+      <option disabled selected>Font Size</option>
+      <option value="1">Tiny</option>
+      <option value="2">Small</option>
+      <option value="3">Normal</option>
+      <option value="4">Large</option>
+      <option value="5">Huge</option>
+    </select>
+    <input type="color" onchange="execCmd('foreColor', this.value)" title="Text Color"/>
+    <input type="text" id="mediaUrl" placeholder="YouTube/MP4 URL" onkeydown="if(event.key==='Enter') insertMedia()">
+    <button onclick="insertMedia()">🎥 Media</button>
+    <input type="file" id="fileInput" accept=".html" class="hidden" onchange="loadFile(event)">
+    <button onclick="document.getElementById('fileInput').click()">📂 Load</button>
+    <button onclick="saveFile()">💾 Save</button>
+    <button onclick="exportPDF()">📄 PDF</button>
+    <button onclick="toggleMode()">🌓 Mode</button>
+    <button onclick="toggleFullscreen()">⛶ Fullscreen</button>
+  </div>
+  <div id="editor" contenteditable="true" ondrop="handleDrop(event)" ondragover="event.preventDefault()"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const editor = document.getElementById("editor");
+    function execCmd(command, value = null) 
+    {
+      document.execCommand(command, false, value);
+      saveToLocal();
+    }
+    function insertHTML(html) 
+    {
+      const sel = window.getSelection();
+      if (sel.getRangeAt && sel.rangeCount) 
+      {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const el = document.createElement("div");
+        el.innerHTML = html;
+        const frag = document.createDocumentFragment();
+        let node, lastNode;
+        while ((node = el.firstChild)) lastNode = frag.appendChild(node);
+        range.insertNode(frag);
+        if (lastNode) 
+        {
+          range.setStartAfter(lastNode);
+          range.setEndAfter(lastNode);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        saveToLocal();
+      }
+    }
+    function insertMedia() 
+    {
+      const url = document.getElementById('mediaUrl').value.trim();
+      if (url) 
+      {
+        const id = `media-${Date.now()}`;
+        let content = '';
+        if (url.includes('youtube.com') || url.includes('youtu.be')) 
+        {
+          const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
+          content = `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+        } 
+        else 
+        {
+          content = `<video controls><source src="${url}" type="video/mp4"></video>`;
+        }
+        const html = `
+        <div class="media-box" id="${id}" contenteditable="false">
+          ${content}
+            <div class="context-menu hidden" id="ctx-${id}">
+              <button onclick="alignMedia('${id}', 'left')">Align Left</button>
+              <button onclick="alignMedia('${id}', 'center')">Center</button>
+              <button onclick="alignMedia('${id}', 'right')">Align Right</button>
+              <button onclick="removeImage('${id}')">Remove</button>
+            </div>
+          </div>
+        `;
+        insertHTML(html);
+        makeImageInteractive(id); 
+        document.getElementById('mediaUrl').value = '';
+      }
+  }
+function makeImageInteractive(id) {
+  const el = document.getElementById(id);
+  let isDragging = false;
+  const gridSize = 10;
+
+  el.onmousedown = function (e) {
+    if (e.button === 2) return;
+    isDragging = true;
+    const shiftX = e.clientX - el.getBoundingClientRect().left;
+    const shiftY = e.clientY - el.getBoundingClientRect().top;
+
+    el.style.position = 'absolute';
+    el.style.zIndex = 1000;
+    editor.appendChild(el);
+
+    function moveAt(pageX, pageY) {
+      el.style.left = Math.round((pageX - shiftX) / gridSize) * gridSize + 'px';
+      el.style.top = Math.round((pageY - shiftY) / gridSize) * gridSize + 'px';
+    }
+
+    moveAt(e.pageX, e.pageY);
+
+    function onMouseMove(e) {
+      if (isDragging) moveAt(e.pageX, e.pageY);
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+
+    el.onmouseup = function () {
+      isDragging = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      el.onmouseup = null;
+    };
+  };
+
+  el.ondragstart = () => false;
+
+  el.oncontextmenu = function (e) {
+    e.preventDefault();
+    document.querySelectorAll('.context-menu').forEach(menu => menu.classList.add('hidden'));
+    const menu = document.getElementById('ctx-' + id);
+    if (menu) {
+      menu.style.left = e.offsetX + 'px';
+      menu.style.top = e.offsetY + 'px';
+      menu.classList.remove('hidden');
+    }
+  };
+
+  document.addEventListener('click', (e) => {
+    if (!el.contains(e.target)) {
+      document.querySelectorAll('.context-menu').forEach(menu => menu.classList.add('hidden'));
+    }
+  });
+}
+
+    function insertCode() 
+    {
+      const code = prompt("Enter your code:");
+      if (code) 
+      {
+        insertHTML(`<pre><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`);
+      }
+    }
+    function saveFile() 
+    {
+      const content = editor.innerHTML;
+      const blob = new Blob([content], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "document.html";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function loadFile(event) 
+    {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) 
+      {
+        editor.innerHTML = e.target.result;
+        saveToLocal();
+      };
+      if (file) reader.readAsText(file);
+    }
+    function toggleMode() 
+    {
+      document.body.classList.toggle("light-mode");
+    }
+    function toggleFullscreen() 
+    {
+      if (!document.fullscreenElement) 
+      {
+        document.documentElement.requestFullscreen();
+      } else 
+      {
+        document.exitFullscreen();
+      }
+    }
+    function handleDrop(event) 
+    {
+      event.preventDefault();
+      const file = event.dataTransfer.files[0];
+      if (file && file.type.startsWith("image/")) 
+      {
+        const reader = new FileReader();
+        reader.onload = function(e) 
+        {
+          insertHTML(`<img src="${e.target.result}" style="max-width:100%; border:1px solid var(--accent); margin:10px 0;" />`);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    async function exportPDF() 
+    {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.html(editor, {
+        callback: function (pdf) 
+        {
+          pdf.save("document.pdf");
+        },
+        x: 10,
+        y: 10
+      });
+    }
+    function saveToLocal() 
+    {
+      localStorage.setItem('wordpad-content', editor.innerHTML);
+    }
+    function loadFromLocal() 
+    {
+      const content = localStorage.getItem('wordpad-content');
+      if (content) editor.innerHTML = content;
+    }
+    function insertImage() 
+    {
+      const url = document.getElementById('imgUrl').value.trim();
+      if (url) 
+      {
+        const wrapperId = `img-${Date.now()}`;
+        const html = `
+        <div class="draggable-image" id="${wrapperId}" contenteditable="false">
+          <img src="${url}" style="max-width:200px; border:1px solid var(--accent);" />
+          </div>`;
+        insertHTML(html);
+        makeImageDraggable(wrapperId);
+        document.getElementById('imgUrl').value = '';
+      }
+    }
+    function alignMedia(id, alignment) 
+    {
+      const el = document.getElementById(id);
+      el.classList.remove("wrap-left", "wrap-right");
+      el.style.margin = '10px auto';
+      el.style.float = 'none';
+      if (alignment === 'left') 
+      {
+        el.classList.add("wrap-left");
+      }
+      else if (alignment === 'right') 
+      {
+        el.classList.add("wrap-right");
+      }
+      else if (alignment === 'center') 
+      {
+        el.style.display = 'block';
+      }
+    }
+    editor.addEventListener('keydown', function (e) 
+    {
+      if (e.key === "Delete" || e.key === "Backspace") 
+      {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        const node = range.startContainer.nodeType === 3 ? range.startContainer.parentNode : range.startContainer;
+        const wrapper = node.closest('.image-box, .media-box');
+        if (wrapper && editor.contains(wrapper)) 
+        {
+          wrapper.remove();
+          e.preventDefault();
+        }
+      }
+    });
+    editor.addEventListener('click', function (e) 
+    {
+      document.querySelectorAll('.image-box, .media-box').forEach(el => el.classList.remove('selected'));
+      const wrapper = e.target.closest('.image-box, .media-box');
+      if (wrapper && editor.contains(wrapper)) 
+      {
+        wrapper.classList.add('selected');
+      }
+    });
+    window.addEventListener('beforeunload', saveToLocal);
+    window.addEventListener('load', loadFromLocal);
+  </script>
+</body>
+</html>
