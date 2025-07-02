@@ -23,7 +23,7 @@ public class blogs extends User{
 		this.comments = comments;
 	}
 	public blogs(String links, String blog_id, String comments) {
-		super(null, null, 0, null, null, null);
+		super(null, null, 0, null, null, null, null);
 		this.links = links;
 		this.blog_id = blog_id;
 		this.comments = comments;

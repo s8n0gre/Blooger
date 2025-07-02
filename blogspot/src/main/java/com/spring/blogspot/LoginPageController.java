@@ -36,6 +36,10 @@ public String showDashboard() {
 public String showEditor() {
     return "editor"; 
 }
+@GetMapping("/edit_profile")
+public String showEditProfile(Model model, Principal principal) {
+    return "edit_profile";
+}
 @GetMapping("/my-posts")
 public String showMyPosts() {
     return "my-posts"; 
@@ -44,24 +48,31 @@ public String showMyPosts() {
 @GetMapping("/profile")
 public String showProfile(Model model, Principal principal) {
     if (principal == null) {
-        model.addAttribute("username", "TestUser");
+        model.addAttribute("name", "TestUser");
         model.addAttribute("password", "password");
         model.addAttribute("age", 0);
         model.addAttribute("gender", "Unknown");
         model.addAttribute("specialization", "None");
+        model.addAttribute("email", "test@example.com");
         return "profile";
     }
     User user = userRepository.findByName(principal.getName());
     if (user != null) {
-        model.addAttribute("username", user.getName());
+        model.addAttribute("name", user.getName());
         model.addAttribute("password", user.getPassword());
         model.addAttribute("age", user.getAge());
         model.addAttribute("gender", user.getGender());
         model.addAttribute("specialization", user.getSpecialization());
+        model.addAttribute("email", user.getEmail());
     }
     return "profile";
 }
 
+@PostMapping("/edit_profile")
+public String processEditProfile(@ModelAttribute("user") User user, Model model) {
+    userRepository.updateUser(user); // You need to implement this method in UserRepository
+    return "redirect:/profile";
+}
     @PostMapping("/login")
     public String processLogin(@ModelAttribute("login") Login login, Model model) {
         User found = userRepository.findByNameAndPassword(login.getName(), login.getPassword());

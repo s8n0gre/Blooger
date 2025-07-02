@@ -1,5 +1,0 @@
-
-CREATE TABLE EXAMPLE (
-  id INT PRIMARY KEY,
-  name VARCHAR(255)
-);

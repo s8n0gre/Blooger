@@ -25,7 +25,7 @@ public class support extends User{
 		this.complaint_id = complaint_id;
 	}
 	public support(String assistant, String creator_id, String complaint_id) {
-		super(null, null, 0, null, null , null);
+		super(null, null, 0, null, null, null, null);
 		
 		this.assistant = assistant;
 		this.creator_id = creator_id;

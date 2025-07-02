@@ -16,14 +16,15 @@ public class UserRepository {
     private JdbcTemplate jdbcTemplate;
 
     public int insertUser(User u) {
-        String sql = "INSERT INTO users (u_id, name, password, age, gender, specialization) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (u_id, name, password, age, gender, specialization, email) VALUES (?, ?, ?, ?, ?, ?, ?)";
         return jdbcTemplate.update(sql,
                 u.getU_id(),
                 u.getName(),
                 u.getPassword(),
                 u.getAge(),
                 u.getGender(),
-                u.getSpecialization()
+                u.getSpecialization(),
+                u.getEmail()
         );
     }
 
@@ -39,6 +40,7 @@ public class UserRepository {
                 user.setAge(rs.getInt("age"));
                 user.setGender(rs.getString("gender"));
                 user.setSpecialization(rs.getString("specialization"));
+                user.setEmail(rs.getString("email"));
                 return user;
             }
         });
@@ -55,6 +57,7 @@ public class UserRepository {
             user.setAge(rs.getInt("age"));
             user.setGender(rs.getString("gender"));
             user.setSpecialization(rs.getString("specialization"));
+            user.setEmail(rs.getString("email"));
             return user;
         }
     }, name, password);
@@ -74,9 +77,22 @@ public User findByName(String name) {
             user.setAge(rs.getInt("age"));
             user.setGender(rs.getString("gender"));
             user.setSpecialization(rs.getString("specialization"));
+            user.setEmail(rs.getString("email"));
             return user;
         }
     }, name);
     return users.isEmpty() ? null : users.get(0);
     }
+    public int updateUser(User user) {
+    String sql = "UPDATE users SET name = ?, password = ?, age = ?, gender = ?, specialization = ?, email = ? WHERE u_id = ?";
+    return jdbcTemplate.update(sql,
+        user.getName(),
+        user.getPassword(),
+        user.getAge(),
+        user.getGender(),
+        user.getSpecialization(),
+        user.getEmail(),
+        user.getU_id()
+    );
+}
 }

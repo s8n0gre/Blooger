@@ -14,6 +14,7 @@ public class User extends admin{
 	private int age;
 	private String gender;
 	private String specialization;
+	private String email;
 	@Id
 	private String u_id;
 	public String getName() {
@@ -46,6 +47,12 @@ public class User extends admin{
 	public void setSpecialization(String specialization) {
 		this.specialization = specialization;
 	}
+	public String getEmail() {
+		return email;
+	}
+	public void setEmail(String email) {
+		this.email = email;
+	}
 	public String getU_id() {
 		return u_id;
 	}
@@ -55,18 +62,19 @@ public class User extends admin{
     public User() {
         super(null, 0, null, null);
     }
-	public User(String name, String password, int age, String gender, String specialization, String u_id) {
+	public User(String name, String password, int age, String gender, String specialization, String email, String u_id) {
 		super(null, 0, null, null);
 		this.name = name;
 		this.password = password;
 		this.age = age;
 		this.gender = gender;
 		this.specialization = specialization;
+		this.email = email;
 		this.u_id = u_id;
 	}
 	@Override
 	public String toString() {
 		return "user [name=" + name + ", password=" + password + ", age=" + age + ", gender=" + gender
-				+ ", specialization=" + specialization + ", u_id=" + u_id + "]";
+				+ ", specialization=" + specialization + ", email=" + email + ", u_id=" + u_id + "]";
 	}
 }
