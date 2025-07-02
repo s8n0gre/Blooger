@@ -1,4 +1,4 @@
-package com.spring.blogspot;
+package com.spring.blogspot.Login;
 
 public class Login {
     private String name;

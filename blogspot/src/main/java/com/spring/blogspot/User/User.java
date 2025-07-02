@@ -1,6 +1,5 @@
 package com.spring.blogspot.User;
 
-import com.spring.blogspot.Admin.admin;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -8,7 +7,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
-public class User extends admin{
+public class User {
 	private String name;
 	private String password;
 	private int age;
@@ -60,10 +59,10 @@ public class User extends admin{
 		this.u_id = u_id;
 	}
     public User() {
-        super(null, 0, null, null);
+        super();
     }
 	public User(String name, String password, int age, String gender, String specialization, String email, String u_id) {
-		super(null, 0, null, null);
+		super();
 		this.name = name;
 		this.password = password;
 		this.age = age;

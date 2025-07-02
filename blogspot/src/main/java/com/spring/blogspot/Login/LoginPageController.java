@@ -1,4 +1,4 @@
-package com.spring.blogspot;
+package com.spring.blogspot.Login;
 
 import com.spring.blogspot.User.User;
 import com.spring.blogspot.User.UserRepository;
